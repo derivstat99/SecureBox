@@ -38,4 +38,8 @@ public class FileService {
 
         return fileRepository.save(meta);
     }
+
+    public FileMetaData getFileMetaData(Long fileId){
+        return fileRepository.findById(fileId).orElseThrow();
+    }
 }
