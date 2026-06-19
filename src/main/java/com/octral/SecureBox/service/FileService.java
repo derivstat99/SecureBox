@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+
 @Service
 public class FileService {
 
@@ -19,19 +21,24 @@ public class FileService {
     private UserRepository userRepository;
     @Autowired
     private FolderRepository folderRepository;
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
-    public FileMetaData uploadFile(MultipartFile file, Long userId, Long folderId) {
-        User user=userRepository.findById(userId).orElseThrow();
-        if(file.getSize()>5*1024*1024) throw new RuntimeException("File too large");
+    public FileMetaData uploadFile(MultipartFile file, Long userId, Long folderId) throws IOException {
+        User user = userRepository.findById(userId).orElseThrow();
+        if (file.getSize() > 5 * 1024 * 1024) throw new RuntimeException("File too large");
 
-        FileMetaData meta=new FileMetaData();
+        String fileUrl = cloudinaryService.upload(file);
+
+        FileMetaData meta = new FileMetaData();
         meta.setFileName(file.getOriginalFilename());
         meta.setFileSize(file.getSize());
         meta.setFileType(file.getContentType());
+        meta.setFilePath(fileUrl);
         meta.setUser(user);
 
-        if(folderId!=null){
-            Folder folder=folderRepository.findById(folderId).orElseThrow();
+        if (folderId != null) {
+            Folder folder = folderRepository.findById(folderId).orElseThrow();
             meta.setFolder(folder);
             folder.getFiles().add(meta);
         }
@@ -39,7 +46,7 @@ public class FileService {
         return fileRepository.save(meta);
     }
 
-    public FileMetaData getFileMetaData(Long fileId){
+    public FileMetaData getFileMetaData(Long fileId) {
         return fileRepository.findById(fileId).orElseThrow();
     }
 }
