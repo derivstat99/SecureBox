@@ -25,6 +25,9 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<FileMetaData> files=new ArrayList<>();
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Folder> folders=new ArrayList<>();
+
     public User(Long id){
         this.id=id;
     }

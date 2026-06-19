@@ -1,8 +1,10 @@
 package com.octral.SecureBox.service;
 
 import com.octral.SecureBox.model.FileMetaData;
+import com.octral.SecureBox.model.Folder;
 import com.octral.SecureBox.model.User;
 import com.octral.SecureBox.repository.FileRepository;
+import com.octral.SecureBox.repository.FolderRepository;
 import com.octral.SecureBox.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,14 +17,24 @@ public class FileService {
     private FileRepository fileRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private FolderRepository folderRepository;
 
-    public FileMetaData uploadFile(MultipartFile file, Long id) {
-        User user=userRepository.findById(id).orElseThrow();
+    public FileMetaData uploadFile(MultipartFile file, Long userId, Long folderId) {
+        User user=userRepository.findById(userId).orElseThrow();
+        if(file.getSize()>5*1024*1024) throw new RuntimeException("File too large");
 
         FileMetaData meta=new FileMetaData();
         meta.setFileName(file.getOriginalFilename());
         meta.setFileSize(file.getSize());
+        meta.setFileType(file.getContentType());
         meta.setUser(user);
+
+        if(folderId!=null){
+            Folder folder=folderRepository.findById(folderId).orElseThrow();
+            meta.setFolder(folder);
+            folder.getFiles().add(meta);
+        }
 
         return fileRepository.save(meta);
     }

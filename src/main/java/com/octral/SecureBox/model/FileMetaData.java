@@ -20,6 +20,10 @@ public class FileMetaData {
     private String fileType;
 
     @ManyToOne
-    @JoinColumn(name="user_id")
+    @JoinColumn(name = "user_id")
     private User user;
+
+    @ManyToOne
+    @JoinColumn(name="folder_id", nullable = true)
+    private Folder folder;
 }
