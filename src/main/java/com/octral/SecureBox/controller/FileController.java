@@ -1,6 +1,7 @@
 package com.octral.SecureBox.controller;
 
 import com.octral.SecureBox.dto.FileResponse;
+import com.octral.SecureBox.dto.StorageUsageResponse;
 import com.octral.SecureBox.model.FileMetaData;
 import com.octral.SecureBox.security.SecurityUtils;
 import com.octral.SecureBox.service.CloudinaryService;
@@ -50,6 +51,51 @@ public class FileController {
         );
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<FileResponse>> searchFiles(@RequestParam String q) {
+        return ResponseEntity.ok(
+                fileService.searchByFileName(securityUtils.getCurrentUser(), q)
+        );
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<List<FileResponse>> getRecentUploads(
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        return ResponseEntity.ok(
+                fileService.getRecentUploads(securityUtils.getCurrentUser(), limit)
+        );
+    }
+
+    @GetMapping("/storage")
+    public ResponseEntity<StorageUsageResponse> getStorageUsage() {
+        return ResponseEntity.ok(fileService.getStorageUsage(securityUtils.getCurrentUser()));
+    }
+
+    @GetMapping("/favorites")
+    public ResponseEntity<List<FileResponse>> getFavoriteFiles() {
+        return ResponseEntity.ok(fileService.getFavoriteFiles(securityUtils.getCurrentUser()));
+    }
+
+    @GetMapping("/trash")
+    public ResponseEntity<List<FileResponse>> getTrashFiles() {
+        return ResponseEntity.ok(fileService.getTrashFiles(securityUtils.getCurrentUser()));
+    }
+
+    @PutMapping("/{fileId}/favorite")
+    public ResponseEntity<FileResponse> toggleFavorite(@PathVariable Long fileId) {
+        return ResponseEntity.ok(
+                fileService.toggleFavorite(fileId, securityUtils.getCurrentUser())
+        );
+    }
+
+    @PostMapping("/{fileId}/restore")
+    public ResponseEntity<FileResponse> restoreFile(@PathVariable Long fileId) {
+        return ResponseEntity.ok(
+                fileService.restoreFile(fileId, securityUtils.getCurrentUser())
+        );
+    }
+
     @GetMapping("/{fileId}/download")
     public ResponseEntity<byte[]> downloadFile(@PathVariable Long fileId) throws IOException {
         FileMetaData meta = fileService.getOwnedFile(fileId, securityUtils.getCurrentUser());
@@ -72,8 +118,14 @@ public class FileController {
     }
 
     @DeleteMapping("/{fileId}")
-    public ResponseEntity<Void> deleteFile(@PathVariable Long fileId) throws IOException {
-        fileService.deleteFile(fileId, securityUtils.getCurrentUser());
+    public ResponseEntity<Void> moveToTrash(@PathVariable Long fileId) {
+        fileService.moveToTrash(fileId, securityUtils.getCurrentUser());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{fileId}/permanent")
+    public ResponseEntity<Void> permanentDeleteFile(@PathVariable Long fileId) throws IOException {
+        fileService.permanentDeleteFile(fileId, securityUtils.getCurrentUser());
         return ResponseEntity.noContent().build();
     }
 }

@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Entity
 @NoArgsConstructor
@@ -19,6 +21,10 @@ public class FileMetaData {
     private String cloudinaryPublicId;
     private Long fileSize;
     private String fileType;
+    private boolean favorite = false;
+    private boolean deleted = false;
+    private LocalDateTime uploadedAt;
+    private LocalDateTime deletedAt;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
