@@ -12,13 +12,24 @@ import java.util.Map;
 
 @Service
 public class CloudinaryService {
+
     @Autowired
     private Cloudinary cloudinary;
 
-    public String upload(MultipartFile file) throws IOException {
-        Map result = cloudinary.uploader().upload(file.getBytes(),
-                ObjectUtils.asMap("resource_type", "auto"));
-        return (String) result.get("secure_url");
+    public Map<String, String> upload(MultipartFile file) throws IOException {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap("resource_type", "auto")
+        );
+        return Map.of(
+                "url", (String) result.get("secure_url"),
+                "publicId", (String) result.get("public_id")
+        );
+    }
+
+    public void delete(String publicId) throws IOException {
+        cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "auto"));
     }
 
     public byte[] download(String fileUrl) throws IOException {

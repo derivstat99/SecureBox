@@ -16,6 +16,7 @@ public class FileMetaData {
 
     private String fileName;
     private String filePath;
+    private String cloudinaryPublicId;
     private Long fileSize;
     private String fileType;
 

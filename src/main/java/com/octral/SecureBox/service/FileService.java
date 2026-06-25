@@ -1,52 +1,93 @@
 package com.octral.SecureBox.service;
 
+import com.octral.SecureBox.dto.FileResponse;
 import com.octral.SecureBox.model.FileMetaData;
 import com.octral.SecureBox.model.Folder;
 import com.octral.SecureBox.model.User;
 import com.octral.SecureBox.repository.FileRepository;
 import com.octral.SecureBox.repository.FolderRepository;
-import com.octral.SecureBox.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class FileService {
 
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+
     @Autowired
     private FileRepository fileRepository;
-    @Autowired
-    private UserRepository userRepository;
+
     @Autowired
     private FolderRepository folderRepository;
+
+    @Autowired
+    private FolderService folderService;
+
     @Autowired
     private CloudinaryService cloudinaryService;
 
-    public FileMetaData uploadFile(MultipartFile file, Long userId, Long folderId) throws IOException {
-        User user = userRepository.findById(userId).orElseThrow();
-        if (file.getSize() > 5 * 1024 * 1024) throw new RuntimeException("File too large");
+    public FileResponse uploadFile(MultipartFile file, User user, Long folderId) throws IOException {
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new RuntimeException("File too large (max 5MB)");
+        }
 
-        String fileUrl = cloudinaryService.upload(file);
+        Map<String, String> uploadResult = cloudinaryService.upload(file);
 
         FileMetaData meta = new FileMetaData();
         meta.setFileName(file.getOriginalFilename());
         meta.setFileSize(file.getSize());
         meta.setFileType(file.getContentType());
-        meta.setFilePath(fileUrl);
+        meta.setFilePath(uploadResult.get("url"));
+        meta.setCloudinaryPublicId(uploadResult.get("publicId"));
         meta.setUser(user);
 
         if (folderId != null) {
-            Folder folder = folderRepository.findById(folderId).orElseThrow();
+            Folder folder = folderService.getOwnedFolder(folderId, user);
             meta.setFolder(folder);
-            folder.getFiles().add(meta);
         }
 
-        return fileRepository.save(meta);
+        return FileResponse.from(fileRepository.save(meta));
     }
 
-    public FileMetaData getFileMetaData(Long fileId) {
-        return fileRepository.findById(fileId).orElseThrow();
+    public FileMetaData getOwnedFile(Long fileId, User user) {
+        FileMetaData meta = fileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("File not found"));
+        if (!meta.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Access denied");
+        }
+        return meta;
+    }
+
+    public List<FileResponse> getAllUserFiles(User user) {
+        return fileRepository.findByUserId(user.getId()).stream()
+                .map(FileResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    public List<FileResponse> getFilesInFolder(Long folderId, User user) {
+        folderService.getOwnedFolder(folderId, user);
+        return fileRepository.findByFolderId(folderId).stream()
+                .map(FileResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    public FileResponse renameFile(Long fileId, String newName, User user) {
+        FileMetaData meta = getOwnedFile(fileId, user);
+        meta.setFileName(newName);
+        return FileResponse.from(fileRepository.save(meta));
+    }
+
+    public void deleteFile(Long fileId, User user) throws IOException {
+        FileMetaData meta = getOwnedFile(fileId, user);
+        if (meta.getCloudinaryPublicId() != null) {
+            cloudinaryService.delete(meta.getCloudinaryPublicId());
+        }
+        fileRepository.delete(meta);
     }
 }
